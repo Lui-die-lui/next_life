@@ -1,0 +1,335 @@
+// Prisma schema for "다음 생" (Next Life)
+// All physical tables are prefixed with nl_ as requested.
+// Prisma Client model names stay conventional (PascalCase / better-auth defaults)
+// so query code (prisma.user.findUnique, prisma.experience.findMany, ...) reads naturally;
+// only the @@map target controls the actual Postgres table name.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Better Auth tables (managed by the better-auth Prisma adapter)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  experiences          Experience[]
+  challenges           Challenge[]
+  linkCards            LinkCard[]
+  experiments          Experiment[]
+  notificationSetting  NotificationSetting?
+
+  @@map("nl_user")
+}
+
+model Session {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("nl_session")
+}
+
+model Account {
+  id                    String    @id
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  providerId            String
+  accountId             String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("nl_account")
+}
+
+model Verification {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  @@map("nl_verification")
+}
+
+// ---------------------------------------------------------------------------
+// Domain enums
+// ---------------------------------------------------------------------------
+
+enum ExperienceStatus {
+  COMPLETED
+  IN_PROGRESS
+}
+
+enum ChallengeStatus {
+  IDEA // 구상 중
+  IN_PROGRESS // 진행 중
+  WRAPPING_UP // 마무리
+  STOPPED // 중단
+}
+
+enum LinkCardStatus {
+  REVIEWING // 검토 중
+  WORTH_TRYING // 시도할 만함
+  NOT_LINKED // 이번 도전에는 연결하지 않음
+}
+
+enum ExperimentStatus {
+  PREP // 준비
+  IN_PROGRESS // 진행 중
+  RETRO_PENDING // 회고 대기
+  DONE // 마무리
+  STOPPED // 중단
+}
+
+enum HelpfulnessRating {
+  HELPED
+  PARTIALLY_HELPED
+  NOT_HELPED
+  NOT_ENOUGH_INFO
+}
+
+enum NotificationJobKind {
+  EXPERIMENT_DEADLINE
+}
+
+enum NotificationJobStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  CANCELED
+}
+
+// ---------------------------------------------------------------------------
+// Domain models
+// ---------------------------------------------------------------------------
+
+model Experience {
+  id             String           @id @default(cuid())
+  userId         String
+  field          String // 분야 이름
+  title          String // 경험 제목
+  whatYouDid     String // 구체적으로 한 일
+  status         ExperienceStatus
+  progress       Int? // 0~99, 진행 중일 때만 의미 있음
+  goalAtTheTime  String? // 당시 목표
+  difficulty     String? // 어려웠던 점
+  approach       String? // 해결하거나 시도한 방법
+  resultEvidence String? // 결과와 확인 가능한 근거
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkCardLinks  LinkCardExperience[]
+
+  @@index([userId])
+  @@map("nl_experiences")
+}
+
+model Challenge {
+  id            String          @id @default(cuid())
+  userId        String
+  title         String
+  field         String
+  reason        String? // 해보고 싶은 이유
+  goalOrProblem String // 구체적인 목표 또는 해결하고 싶은 문제
+  blocker       String? // 현재 막히는 지점
+  constraints   String? // 시간, 도구, 비용 등 제약
+  status        ChallengeStatus @default(IDEA)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkCards   LinkCard[]
+  experiments Experiment[]
+
+  @@index([userId])
+  @@map("nl_challenges")
+}
+
+/// 경험 연결 카드
+model LinkCard {
+  id                    String         @id @default(cuid())
+  userId                String
+  challengeId           String
+  challengeTitleSnapshot String
+  status                LinkCardStatus @default(REVIEWING)
+
+  previousProblem  String? // 이전에는 어떤 문제를 해결하거나 시도했나
+  solutionPrinciple String? // 사용했던 해결 방법 또는 원리
+  applyTarget      String? // 새 도전의 어떤 문제에 활용할 수 있나
+  commonGround     String? // 두 상황의 공통 목표·장애물·제약
+  differences      String? // 두 상황은 무엇이 달라 그대로 적용하면 안 되는가
+  verifyQuestion   String? // 실제로 확인하려면 무엇을 해봐야 하는가
+  noLinkReason     String? // 연결하지 않기로 한 이유
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  experiences LinkCardExperience[]
+  experiments Experiment[]
+
+  @@index([userId])
+  @@index([challengeId])
+  @@map("nl_link_cards")
+}
+
+/// 연결 카드가 참조하는 이전 경험들 (경험 삭제 후에도 스냅샷 보존)
+model LinkCardExperience {
+  id           String  @id @default(cuid())
+  linkCardId   String
+  experienceId String?
+
+  // snapshot fields so a deleted Experience doesn't break past cards
+  experienceTitleSnapshot    String
+  experienceFieldSnapshot    String
+  experienceStatusSnapshot   ExperienceStatus
+  experienceProgressSnapshot Int?
+
+  linkCard   LinkCard    @relation(fields: [linkCardId], references: [id], onDelete: Cascade)
+  experience Experience? @relation(fields: [experienceId], references: [id], onDelete: SetNull)
+
+  @@unique([linkCardId, experienceId])
+  @@map("nl_link_card_experiences")
+}
+
+model Experiment {
+  id                     String           @id @default(cuid())
+  userId                 String
+  challengeId            String
+  challengeTitleSnapshot String
+  linkCardId             String?
+
+  title              String
+  principleToApply   String // 적용해 볼 이전 경험의 원리
+  action             String // 실제로 할 행동
+  observationTargets String? // 기록할 관찰 항목
+  successCriteria    String? // 도움이 됐는지 판단할 기준
+
+  startDate        DateTime
+  endDate          DateTime?
+  emailNotifyOn    Boolean          @default(true)
+  status           ExperimentStatus @default(PREP)
+  scheduleVersion  Int              @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  linkCard  LinkCard?          @relation(fields: [linkCardId], references: [id], onDelete: SetNull)
+  checklist ChecklistItem[]
+  report    ExperimentReport?
+  jobs      NotificationJob[]
+
+  @@index([userId])
+  @@index([challengeId])
+  @@map("nl_experiments")
+}
+
+model ChecklistItem {
+  id           String   @id @default(cuid())
+  experimentId String
+  title        String
+  done         Boolean  @default(false)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@index([experimentId])
+  @@map("nl_checklist_items")
+}
+
+model ExperimentReport {
+  id           String            @id @default(cuid())
+  experimentId String            @unique
+
+  whatYouDid           String // 실제로 해본 일
+  observedResult       String // 관찰한 결과
+  helpfulness          HelpfulnessRating
+  helpfulEvidence      String? // 도움이 된 부분과 근거
+  mismatchedConditions String? // 맞지 않았던 조건이나 차이
+  whatToChangeNext     String? // 다음에 바꿀 점
+  nextChallengeMethod  String? // 다음 도전으로 가져갈 방법
+  quantResult          String? // 정량 결과 (선택)
+
+  nextChallengeId String? // "이 경험으로 다음 도전 만들기"로 생성된 도전
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@map("nl_experiment_reports")
+}
+
+model NotificationSetting {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  emailEnabled Boolean  @default(true)
+  timezone     String   @default("Asia/Seoul")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("nl_notification_settings")
+}
+
+/// 예약 발송 작업 + 발송 기록 (중복 방지를 위한 유일 키 포함)
+model NotificationJob {
+  id              String                @id @default(cuid())
+  experimentId    String
+  kind            NotificationJobKind   @default(EXPERIMENT_DEADLINE)
+  scheduleVersion Int
+  status          NotificationJobStatus @default(PENDING)
+  attempts        Int                   @default(0)
+  lastError       String?
+  nextAttemptAt   DateTime              @default(now())
+  sentAt          DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, kind, scheduleVersion])
+  @@index([status, nextAttemptAt])
+  @@map("nl_notification_jobs")
+}

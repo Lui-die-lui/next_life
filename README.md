@@ -16,7 +16,7 @@
 - 연구의 최종 판정은 **불분명**이다 (판정 가능한 논문 9편, 사전 기준 10편에 미달).
 
 **이 앱의 실제 효과는 검증하지 않았습니다.** 논문의 논의를 참고해 화면과 입력 항목을 설계했을 뿐이며, 앱을 사용하면 연결이
-잘 된다는 것을 증명하지 않습니다. 랜딩 페이지 상단에 같은 안내를 표시합니다.
+잘 된다는 것을 증명하지 않습니다. 랜딩 첫 화면 히어로 아래에 논문 제목을 표시하고, '연구 소개'를 펼치면 같은 안내를 읽을 수 있습니다.
 
 ## 논문을 반영한 기능
 
@@ -62,7 +62,7 @@ npm run dev           # http://localhost:3000
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint         # eslint .
-npm run test         # vitest run (44개 테스트)
+npm run test         # vitest run (46개 테스트)
 npm run build        # 프로덕션 빌드
 ```
 
@@ -155,15 +155,31 @@ Google 로그인은 로그인만 처리합니다. 메일 발송 권한을 주지
 
 ## 공개 데모
 
-- 경로: `/demo` (그리고 `/demo/experiences`, `/demo/challenges/[id]`, `/demo/link-cards/[id]`,
-  `/demo/experiments/[id]`, `/demo/experiments/[id]/report`, `/demo/prompt`)
-- 로그인이 전혀 필요 없습니다. 데이터는 `src/lib/demo/seed.ts`의 가상 예시이며, React Context 상태로만 존재합니다
-  (`src/lib/demo/store.tsx`) -- 실제 계정 DB에는 어떤 것도 쓰지 않습니다.
-- 가능한 것: 예시 경험/도전 확인, 연결 카드 검토·수정(새로 만들기도 가능), 체크리스트 체크, 실험 보고서 작성,
-  "다음 도전 만들기", 외부 AI 프롬프트 생성·복사, 알림 메일 미리보기(실제 발송 없음).
-- 상단 배너에 가상의 예시임을 항상 표시하고, 헤더의 "데모 초기화" 버튼으로 언제든 시드 데이터로 되돌릴 수
-  있습니다. (하드 리프레시 시 상태가 초기화됩니다 -- 새로고침을 견디는 영속성이 필요 없다는 판단하에, 브라우저
-  저장소 대신 페이지 이동 동안만 유지되는 메모리 상태로 단순화했습니다.)
+- 경로: `/demo` 아래에 실제 앱과 같은 경로 구조 (`/demo/experiences`, `/demo/challenges/[id]`, `/demo/link-cards/[id]`,
+  `/demo/experiments/new`, `/demo/experiments/[id]`, `/demo/experiments/[id]/report`, `/demo/prompt`)
+- **실제 앱과 같은 화면 컴포넌트를 씁니다.** 화면(`src/components/**/…-screen.tsx`)은 데이터 모양(`src/lib/app-data/types.ts`)과
+  `AppActions` 인터페이스에만 의존하고, 저장 방식은 어댑터가 정합니다.
+  - 실제 앱: `LiveDataProvider` -- 기존 Server Action 호출 후 `router.refresh()`
+  - 데모: `DemoDataProvider` -- 서버와 같은 zod 스키마·상태 전이 규칙으로 검증한 뒤 메모리 상태(`src/lib/demo/store.tsx`)에만 반영
+- 로그인이 필요 없고, 실제 계정 DB에는 어떤 것도 쓰지 않습니다. 메일도 보내지 않습니다(미리보기만 제공).
+- 경험·도전 추가/수정/삭제, 연결 카드 → 실험 만들기 → 체크리스트 → 보고서 → "다음 도전 만들기"까지 전체 흐름을 체험할 수 있습니다.
+- 헤더의 작은 "데모" 배지와 안내 줄로 데모임을 표시하고, "데모 초기화"와 구글 로그인을 제공합니다. 새로고침하면 시드 데이터로
+  돌아갑니다(페이지 이동 동안만 유지되는 메모리 상태).
+
+## 디자인 시스템
+
+- 오프화이트·차콜·그레이지 팔레트(`src/app/globals.css`의 토큰), 큰 페이지 제목, 얇은 구분선, 큰 비주얼 + 오른쪽 설명 행 구성.
+- 공통 화면 요소: `PageHeader`, `SectionHeader`, `SidePanel`(네이티브 `<dialog>` 기반 우측 패널), `FormSection`, `ChoiceGroup`
+  (`src/components/ui/`).
+- 장식 비주얼은 `FieldVisual` 하나(`src/components/visual/field-visual.tsx`): 평면 유기 형태 + 실제 `backdrop-filter` 프로스트
+  글라스 + 번호·분야명(예: 음악 → MUSIC). 분야마다 크롭·방향·배치만 달라지고, 애니메이션은 없습니다. 움직임은 랜딩 히어로에만 있고
+  `prefers-reduced-motion`을 따릅니다.
+
+## 계정 탈퇴
+
+설정 화면의 Danger zone에서 계정 이메일을 다시 입력하면 탈퇴합니다(`src/server/actions/account.ts`). 이메일 일치 여부는 서버에서 다시
+확인하고, `User` 삭제가 세션·OAuth 계정·경험·도전·연결 카드·실험·보고서·알림 작업까지 cascade로 지웁니다. 이후 인증 쿠키를 지우고
+랜딩으로 이동합니다. `account.test.ts`가 다른 사용자의 기록은 남는지까지 실제 DB로 확인합니다.
 
 ## 인증과 권한
 

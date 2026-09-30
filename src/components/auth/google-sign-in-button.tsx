@@ -8,11 +8,13 @@ export function GoogleSignInButton({
   callbackURL = "/home",
   className,
   variant = "primary",
+  size = "md",
   children = "구글로 시작하기",
 }: {
   callbackURL?: string;
   className?: string;
   variant?: "primary" | "secondary" | "danger" | "ghost";
+  size?: "sm" | "md" | "lg";
   children?: React.ReactNode;
 }) {
   const [pending, setPending] = useState(false);
@@ -21,6 +23,7 @@ export function GoogleSignInButton({
     <Button
       type="button"
       variant={variant}
+      size={size}
       className={className}
       disabled={pending}
       onClick={async () => {

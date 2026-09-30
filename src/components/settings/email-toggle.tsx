@@ -30,11 +30,11 @@ export function EmailToggle({ initialEnabled }: { initialEnabled: boolean }) {
           });
         }}
       />
-      <p className="mt-1 text-xs text-(--color-text-muted)">
+      <p className="mt-2 text-[15px] text-(--color-text-muted)">
         꺼두면 계정 전체에서 실험 종료 알림 메일을 보내지 않습니다. 실험별 알림 설정은 각 실험 상세 화면에서 따로
         켜고 끌 수 있습니다.
       </p>
-      {error && <p role="alert" className="mt-1 text-sm text-(--color-danger)">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-[15px] text-(--color-danger)">{error}</p>}
     </div>
   );
 }

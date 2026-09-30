@@ -178,7 +178,7 @@ export async function listHomeExperiments() {
   const user = await requireUser();
   return prisma.experiment.findMany({
     where: { userId: user.id, status: { in: ["PREP", "IN_PROGRESS", "RETRO_PENDING"] } },
-    include: { checklist: true, challenge: true },
+    include: { checklist: true, challenge: true, report: { select: { id: true } } },
     orderBy: [{ endDate: "asc" }, { createdAt: "desc" }],
   });
 }

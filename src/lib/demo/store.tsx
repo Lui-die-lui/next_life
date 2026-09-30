@@ -1,49 +1,70 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { createDemoSeed } from "./seed";
-import type { DemoState, DemoLinkCard, DemoReport, DemoExperiment } from "./types";
-import type { LinkCardStatus } from "@/lib/domain/types";
+import type { DemoState, DemoLinkCardExperienceSnapshot, DemoExperiment } from "./types";
+import type { ChallengeStatus, ExperimentStatus } from "@/lib/domain/types";
+import type {
+  ChallengeValues,
+  ExperienceValues,
+  LinkCardValues,
+  NewExperimentValues,
+  NextChallengeValues,
+  ReportValues,
+} from "@/lib/app-data/types";
 
 function randomId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-interface LinkCardValues {
-  experienceIds: string[];
-  status: LinkCardStatus;
-  previousProblem?: string;
-  solutionPrinciple?: string;
-  applyTarget?: string;
-  commonGround?: string;
-  differences?: string;
-  verifyQuestion?: string;
-  noLinkReason?: string;
-}
-
-interface ReportValues extends Omit<DemoReport, "nextChallengeId"> {
-  finishExperiment: boolean;
-}
-
-interface DemoActions {
-  reset: () => void;
-  updateLinkCard: (id: string, values: LinkCardValues) => void;
-  createLinkCard: (challengeId: string, values: LinkCardValues) => string;
-  toggleChecklistItem: (experimentId: string, itemId: string, done: boolean) => void;
-  addChecklistItem: (experimentId: string, title: string) => void;
-  deleteChecklistItem: (experimentId: string, itemId: string) => void;
-  updateExperimentStatus: (experimentId: string, status: DemoExperiment["status"]) => void;
-  extendExperimentDeadline: (experimentId: string, newEndDate: string) => void;
-  setExperimentEmailNotify: (experimentId: string, on: boolean) => void;
-  saveReport: (experimentId: string, values: ReportValues) => void;
-  createNextChallengeFromReport: (
-    experimentId: string,
-    input: { title: string; field: string; goalOrProblem: string }
-  ) => string;
+/**
+ * Low-level, synchronous mutations of the in-memory demo state. Inputs are
+ * validated with the same zod schemas as the server before they get here
+ * (see components/demo/demo-data-provider.tsx), so this layer only applies
+ * them -- mirroring what the corresponding server action writes.
+ */
+export interface DemoActions {
+  reset(): void;
+  createExperience(values: ExperienceValues): string;
+  updateExperience(id: string, values: ExperienceValues): void;
+  deleteExperience(id: string): void;
+  createChallenge(values: ChallengeValues): string;
+  updateChallenge(id: string, values: ChallengeValues): void;
+  updateChallengeStatus(id: string, status: ChallengeStatus): void;
+  deleteChallenge(id: string): void;
+  createLinkCard(challengeId: string, values: LinkCardValues): string;
+  updateLinkCard(id: string, values: LinkCardValues): void;
+  deleteLinkCard(id: string): void;
+  createExperiment(values: NewExperimentValues): string;
+  updateExperimentStatus(experimentId: string, status: ExperimentStatus): void;
+  extendExperimentDeadline(experimentId: string, newEndDate: string): void;
+  setExperimentEmailNotify(experimentId: string, on: boolean): void;
+  toggleChecklistItem(experimentId: string, itemId: string, done: boolean): void;
+  addChecklistItem(experimentId: string, title: string): void;
+  deleteChecklistItem(experimentId: string, itemId: string): void;
+  saveReport(experimentId: string, values: ReportValues): void;
+  createNextChallengeFromReport(experimentId: string, input: NextChallengeValues): string;
 }
 
 const DemoStateContext = createContext<DemoState | null>(null);
 const DemoActionsContext = createContext<DemoActions | null>(null);
+
+function snapshots(state: DemoState, experienceIds: string[]): DemoLinkCardExperienceSnapshot[] {
+  return experienceIds.map((expId) => {
+    const exp = state.experiences.find((e) => e.id === expId);
+    return {
+      experienceId: expId,
+      titleSnapshot: exp?.title ?? "삭제된 경험",
+      fieldSnapshot: exp?.field ?? "",
+      statusSnapshot: exp?.status ?? "COMPLETED",
+      progressSnapshot: exp?.progress ?? null,
+    };
+  });
+}
+
+function mapExperiment(state: DemoState, id: string, fn: (exp: DemoExperiment) => DemoExperiment): DemoState {
+  return { ...state, experiments: state.experiments.map((exp) => (exp.id === id ? fn(exp) : exp)) };
+}
 
 export function DemoProvider({ children }: { children: ReactNode }) {
   // Demo state lives only in memory for the current visit (resettable, never
@@ -52,185 +73,166 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   // since this provider stays mounted at the /demo layout.
   const [state, setState] = useState<DemoState>(() => createDemoSeed());
 
-  const reset = useCallback(() => {
-    setState(createDemoSeed());
-  }, []);
+  const actions = useMemo<DemoActions>(
+    () => ({
+      reset: () => setState(createDemoSeed()),
 
-  const updateLinkCard = useCallback((id: string, values: LinkCardValues) => {
-    setState((prev) => ({
-      ...prev,
-      linkCards: prev.linkCards.map((card) =>
-        card.id === id
-          ? {
-              ...card,
-              status: values.status,
-              previousProblem: values.previousProblem,
-              solutionPrinciple: values.solutionPrinciple,
-              applyTarget: values.applyTarget,
-              commonGround: values.commonGround,
-              differences: values.differences,
-              verifyQuestion: values.verifyQuestion,
-              noLinkReason: values.noLinkReason,
-              experiences: values.experienceIds.map((expId) => {
-                const exp = prev.experiences.find((e) => e.id === expId);
-                return {
-                  experienceId: expId,
-                  titleSnapshot: exp?.title ?? "삭제된 경험",
-                  fieldSnapshot: exp?.field ?? "",
-                  statusSnapshot: exp?.status ?? "COMPLETED",
-                  progressSnapshot: exp?.progress ?? null,
-                };
-              }),
-            }
-          : card
-      ),
-    }));
-  }, []);
+      createExperience: (values) => {
+        const id = randomId("exp");
+        setState((prev) => ({ ...prev, experiences: [...prev.experiences, { id, ...values }] }));
+        return id;
+      },
+      updateExperience: (id, values) =>
+        setState((prev) => ({
+          ...prev,
+          experiences: prev.experiences.map((e) => (e.id === id ? { id, ...values } : e)),
+        })),
+      deleteExperience: (id) =>
+        // Link cards keep their snapshot; only the live reference is cleared (onDelete: SetNull).
+        setState((prev) => ({
+          ...prev,
+          experiences: prev.experiences.filter((e) => e.id !== id),
+          linkCards: prev.linkCards.map((card) => ({
+            ...card,
+            experiences: card.experiences.map((s) => (s.experienceId === id ? { ...s, experienceId: null } : s)),
+          })),
+        })),
 
-  const createLinkCard = useCallback((challengeId: string, values: LinkCardValues) => {
-    const id = randomId("link");
-    setState((prev) => {
-      const challenge = prev.challenges.find((c) => c.id === challengeId);
-      const newCard: DemoLinkCard = {
-        id,
-        challengeId,
-        challengeTitleSnapshot: challenge?.title ?? "",
-        status: values.status,
-        previousProblem: values.previousProblem,
-        solutionPrinciple: values.solutionPrinciple,
-        applyTarget: values.applyTarget,
-        commonGround: values.commonGround,
-        differences: values.differences,
-        verifyQuestion: values.verifyQuestion,
-        noLinkReason: values.noLinkReason,
-        experiences: values.experienceIds.map((expId) => {
-          const exp = prev.experiences.find((e) => e.id === expId);
+      createChallenge: (values) => {
+        const id = randomId("challenge");
+        setState((prev) => ({ ...prev, challenges: [{ id, ...values, status: "IDEA" }, ...prev.challenges] }));
+        return id;
+      },
+      updateChallenge: (id, values) =>
+        setState((prev) => ({
+          ...prev,
+          challenges: prev.challenges.map((c) => (c.id === id ? { ...c, ...values } : c)),
+        })),
+      updateChallengeStatus: (id, status) =>
+        setState((prev) => ({
+          ...prev,
+          challenges: prev.challenges.map((c) => (c.id === id ? { ...c, status } : c)),
+        })),
+      deleteChallenge: (id) =>
+        setState((prev) => ({
+          ...prev,
+          challenges: prev.challenges.filter((c) => c.id !== id),
+          linkCards: prev.linkCards.filter((c) => c.challengeId !== id),
+          experiments: prev.experiments.filter((e) => e.challengeId !== id),
+        })),
+
+      createLinkCard: (challengeId, values) => {
+        const id = randomId("link");
+        setState((prev) => {
+          const challenge = prev.challenges.find((c) => c.id === challengeId);
+          const { experienceIds, ...fields } = values;
           return {
-            experienceId: expId,
-            titleSnapshot: exp?.title ?? "삭제된 경험",
-            fieldSnapshot: exp?.field ?? "",
-            statusSnapshot: exp?.status ?? "COMPLETED",
-            progressSnapshot: exp?.progress ?? null,
+            ...prev,
+            linkCards: [
+              {
+                id,
+                challengeId,
+                challengeTitleSnapshot: challenge?.title ?? "",
+                ...fields,
+                experiences: snapshots(prev, experienceIds),
+              },
+              ...prev.linkCards,
+            ],
+          };
+        });
+        return id;
+      },
+      updateLinkCard: (id, values) =>
+        setState((prev) => {
+          const { experienceIds, ...fields } = values;
+          return {
+            ...prev,
+            linkCards: prev.linkCards.map((card) =>
+              card.id === id ? { ...card, ...fields, experiences: snapshots(prev, experienceIds) } : card
+            ),
           };
         }),
-      };
-      return { ...prev, linkCards: [newCard, ...prev.linkCards] };
-    });
-    return id;
-  }, []);
+      deleteLinkCard: (id) =>
+        setState((prev) => ({
+          ...prev,
+          linkCards: prev.linkCards.filter((c) => c.id !== id),
+          experiments: prev.experiments.map((e) => (e.linkCardId === id ? { ...e, linkCardId: undefined } : e)),
+        })),
 
-  const toggleChecklistItem = useCallback((experimentId: string, itemId: string, done: boolean) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) =>
-        exp.id === experimentId
-          ? { ...exp, checklist: exp.checklist.map((item) => (item.id === itemId ? { ...item, done } : item)) }
-          : exp
-      ),
-    }));
-  }, []);
-
-  const addChecklistItem = useCallback((experimentId: string, title: string) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) =>
-        exp.id === experimentId
-          ? { ...exp, checklist: [...exp.checklist, { id: randomId("chk"), title, done: false }] }
-          : exp
-      ),
-    }));
-  }, []);
-
-  const deleteChecklistItem = useCallback((experimentId: string, itemId: string) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) =>
-        exp.id === experimentId ? { ...exp, checklist: exp.checklist.filter((i) => i.id !== itemId) } : exp
-      ),
-    }));
-  }, []);
-
-  const updateExperimentStatus = useCallback((experimentId: string, status: DemoExperiment["status"]) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) => (exp.id === experimentId ? { ...exp, status } : exp)),
-    }));
-  }, []);
-
-  const extendExperimentDeadline = useCallback((experimentId: string, newEndDate: string) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) =>
-        exp.id === experimentId
-          ? { ...exp, endDate: newEndDate, status: exp.status === "RETRO_PENDING" ? "IN_PROGRESS" : exp.status }
-          : exp
-      ),
-    }));
-  }, []);
-
-  const setExperimentEmailNotify = useCallback((experimentId: string, on: boolean) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) => (exp.id === experimentId ? { ...exp, emailNotifyOn: on } : exp)),
-    }));
-  }, []);
-
-  const saveReport = useCallback((experimentId: string, values: ReportValues) => {
-    setState((prev) => ({
-      ...prev,
-      experiments: prev.experiments.map((exp) =>
-        exp.id === experimentId
-          ? {
-              ...exp,
-              status: values.finishExperiment ? "DONE" : exp.status,
-              report: {
-                whatYouDid: values.whatYouDid,
-                observedResult: values.observedResult,
-                helpfulness: values.helpfulness,
-                helpfulEvidence: values.helpfulEvidence,
-                mismatchedConditions: values.mismatchedConditions,
-                whatToChangeNext: values.whatToChangeNext,
-                nextChallengeMethod: values.nextChallengeMethod,
-                quantResult: values.quantResult,
-                nextChallengeId: exp.report?.nextChallengeId ?? null,
-              },
-            }
-          : exp
-      ),
-    }));
-  }, []);
-
-  const createNextChallengeFromReport = useCallback(
-    (experimentId: string, input: { title: string; field: string; goalOrProblem: string }) => {
-      const id = randomId("challenge");
-      setState((prev) => ({
-        ...prev,
-        challenges: [
-          { id, title: input.title, field: input.field, goalOrProblem: input.goalOrProblem, status: "IDEA" },
-          ...prev.challenges,
-        ],
-        experiments: prev.experiments.map((exp) =>
-          exp.id === experimentId && exp.report ? { ...exp, report: { ...exp.report, nextChallengeId: id } } : exp
+      createExperiment: (values) => {
+        const id = randomId("experiment");
+        setState((prev) => {
+          const challenge = prev.challenges.find((c) => c.id === values.challengeId);
+          const { checklist, ...fields } = values;
+          const experiment: DemoExperiment = {
+            id,
+            ...fields,
+            challengeTitleSnapshot: challenge?.title ?? "",
+            status: "PREP", // same default as the Experiment model
+            checklist: checklist.map((title) => ({ id: randomId("chk"), title, done: false })),
+          };
+          return { ...prev, experiments: [experiment, ...prev.experiments] };
+        });
+        return id;
+      },
+      updateExperimentStatus: (experimentId, status) =>
+        setState((prev) => mapExperiment(prev, experimentId, (exp) => ({ ...exp, status }))),
+      extendExperimentDeadline: (experimentId, newEndDate) =>
+        setState((prev) =>
+          mapExperiment(prev, experimentId, (exp) => ({
+            ...exp,
+            endDate: newEndDate,
+            status: exp.status === "RETRO_PENDING" ? "IN_PROGRESS" : exp.status,
+          }))
         ),
-      }));
-      return id;
-    },
+      setExperimentEmailNotify: (experimentId, on) =>
+        setState((prev) => mapExperiment(prev, experimentId, (exp) => ({ ...exp, emailNotifyOn: on }))),
+      toggleChecklistItem: (experimentId, itemId, done) =>
+        setState((prev) =>
+          mapExperiment(prev, experimentId, (exp) => ({
+            ...exp,
+            checklist: exp.checklist.map((item) => (item.id === itemId ? { ...item, done } : item)),
+          }))
+        ),
+      addChecklistItem: (experimentId, title) =>
+        setState((prev) =>
+          mapExperiment(prev, experimentId, (exp) => ({
+            ...exp,
+            checklist: [...exp.checklist, { id: randomId("chk"), title, done: false }],
+          }))
+        ),
+      deleteChecklistItem: (experimentId, itemId) =>
+        setState((prev) =>
+          mapExperiment(prev, experimentId, (exp) => ({
+            ...exp,
+            checklist: exp.checklist.filter((i) => i.id !== itemId),
+          }))
+        ),
+
+      saveReport: (experimentId, values) =>
+        setState((prev) =>
+          mapExperiment(prev, experimentId, (exp) => {
+            const { finishExperiment, ...report } = values;
+            return {
+              ...exp,
+              status: finishExperiment ? "DONE" : exp.status,
+              report: { ...report, nextChallengeId: exp.report?.nextChallengeId ?? null },
+            };
+          })
+        ),
+      createNextChallengeFromReport: (experimentId, input) => {
+        const id = randomId("challenge");
+        setState((prev) => ({
+          ...mapExperiment(prev, experimentId, (exp) =>
+            exp.report ? { ...exp, report: { ...exp.report, nextChallengeId: id } } : exp
+          ),
+          challenges: [{ id, ...input, status: "IDEA" }, ...prev.challenges],
+        }));
+        return id;
+      },
+    }),
     []
   );
-
-  const actions: DemoActions = {
-    reset,
-    updateLinkCard,
-    createLinkCard,
-    toggleChecklistItem,
-    addChecklistItem,
-    deleteChecklistItem,
-    updateExperimentStatus,
-    extendExperimentDeadline,
-    setExperimentEmailNotify,
-    saveReport,
-    createNextChallengeFromReport,
-  };
 
   return (
     <DemoStateContext.Provider value={state}>

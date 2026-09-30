@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Field, Input } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { FaGoogle } from "react-icons/fa6";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { authClient } from "@/lib/auth-client";
 import { isValidEmailFormat } from "@/lib/email";
@@ -41,7 +42,7 @@ export function LoginForm({ callbackURL }: { callbackURL: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       <Field label="이메일" required htmlFor="email" error={emailInvalid ? "이메일 형식이 아닙니다." : undefined}>
         <Input
           id="email"
@@ -71,23 +72,33 @@ export function LoginForm({ callbackURL }: { callbackURL: string }) {
         </p>
       )}
 
-      <Button type="submit" disabled={pending}>
+      <Button
+        type="submit"
+        size="lg"
+        disabled={pending}
+        className="mt-1"
+      >
         {pending ? "로그인 중..." : "로그인"}
       </Button>
 
-      <div className="flex items-center gap-3 text-xs text-(--color-text-muted)">
+      <div className="flex items-center gap-3 text-sm text-(--color-text-muted)">
         <span className="h-px flex-1 bg-(--color-border)" />
         또는
         <span className="h-px flex-1 bg-(--color-border)" />
       </div>
 
-      <GoogleSignInButton variant="secondary" callbackURL={callbackURL}>
+      <GoogleSignInButton
+        variant="secondary"
+        size="lg"
+        callbackURL={callbackURL}
+      >
+        <FaGoogle aria-hidden className="h-4 w-4" />
         구글로 시작하기
       </GoogleSignInButton>
 
-      <p className="text-center text-sm text-(--color-text-muted)">
+      <p className="text-center text-[15px] text-(--color-text-muted)">
         계정이 없으신가요?{" "}
-        <Link href="/signup" className="font-medium text-(--color-accent) hover:underline">
+        <Link href="/signup" className="font-medium text-(--color-text) underline underline-offset-4">
           회원가입
         </Link>
       </p>

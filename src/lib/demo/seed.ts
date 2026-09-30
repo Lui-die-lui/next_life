@@ -68,6 +68,16 @@ export function createDemoSeed(): DemoState {
         constraints: "주말에만 시간을 낼 수 있다.",
         status: "IN_PROGRESS",
       },
+      {
+        id: "challenge-brand",
+        title: "작은 온라인 굿즈 숍 열어 보기",
+        field: "커머스",
+        reason: "직접 만든 디자인을 사람들이 실제로 사는지 확인해 보고 싶다.",
+        goalOrProblem: "소량으로 굿즈를 만들어 온라인에서 판매해 보고 싶다. 무엇부터 정해야 할지 순서가 막막하다.",
+        blocker: "준비할 일이 너무 많아 보여서 시작 순서를 정하지 못하고 있다.",
+        constraints: "초기 비용은 30만 원 이내로 하고 싶다.",
+        status: "IDEA",
+      },
     ],
     linkCards: [
       {

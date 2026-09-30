@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { SignupForm } from "@/components/auth/signup-form";
-import { Card } from "@/components/ui/card";
+import { AuthShell } from "@/components/auth/auth-shell";
 
 export default async function SignupPage({ searchParams }: PageProps<"/signup">) {
   const params = await searchParams;
@@ -14,14 +13,13 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-16">
-      <Link href="/" className="text-center text-sm text-(--color-text-muted) hover:text-(--color-text)">
-        다음 생 · NextLife
-      </Link>
-      <h1 className="text-center text-xl font-semibold text-(--color-text)">회원가입</h1>
-      <Card>
-        <SignupForm callbackURL={nextParam ?? "/home"} />
-      </Card>
-    </main>
+    <AuthShell
+      title="Sign up"
+      description="계정을 만들고 지금까지의 경험부터 기록해 보세요."
+      switchHref={nextParam ? `/login?next=${encodeURIComponent(nextParam)}` : "/login"}
+      switchLabel="Sign in"
+    >
+      <SignupForm callbackURL={nextParam ?? "/home"} />
+    </AuthShell>
   );
 }

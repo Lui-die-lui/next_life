@@ -82,3 +82,19 @@ export async function getChallengeDetail(id: string) {
   if (!challenge) throw new Error("도전을 찾을 수 없습니다.");
   return challenge;
 }
+
+/** Challenge list with the experiment/link-card context the list rows show. */
+export async function listChallengeOverview() {
+  const user = await requireUser();
+  return prisma.challenge.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      experiments: {
+        include: { checklist: true, report: { select: { id: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: { select: { linkCards: true } },
+    },
+  });
+}

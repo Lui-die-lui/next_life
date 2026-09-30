@@ -18,9 +18,9 @@ export function SignOutButton() {
         router.push("/");
         router.refresh();
       }}
-      className="text-sm text-(--color-text-muted) hover:text-(--color-text) disabled:opacity-50"
+      className="h-9 rounded-full border border-(--color-border) px-4 text-sm font-medium text-(--color-text-muted) hover:border-(--color-line) hover:text-(--color-text) disabled:opacity-50"
     >
-      {pending ? "로그아웃 중..." : "로그아웃"}
+      {pending ? "Signing out..." : "Sign out"}
     </button>
   );
 }

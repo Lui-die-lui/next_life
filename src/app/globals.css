@@ -1,26 +1,35 @@
 @import "tailwindcss";
 
 :root {
-  /* Warm-neutral palette, chosen by the user: off-white/charcoal/greige,
-     no separate brand hue -- the primary "accent" is the same charcoal as
-     body text, just used for buttons/links. */
+  /* Warm-neutral palette: off-white / charcoal / greige, no separate brand
+     hue. The "accent" is the same near-black as body text, used for primary
+     buttons, strong rules and focus rings. Visuals carry their own full
+     range within the same palette (see field-visual.tsx). */
+  /* Original palette values (kept as the user chose them); --color-line and
+     --color-text-subtle are derived from the same charcoal/grey. */
   --color-bg: #f2f1ed;
   --color-surface: #faf9f6;
   --color-surface-muted: #ebe9e3;
   --color-border: #d8d5ce;
+  --color-line: #242320;
   --color-text: #242320;
   --color-text-muted: #77746e;
+  --color-text-subtle: #8f8c86;
 
   --color-accent: #242320;
   --color-accent-foreground: #faf9f6;
   --color-accent-soft: #e7e4dd;
 
-  --color-warn: #9a5b1f;
-  --color-warn-soft: #f4e6d4;
+  /* "Needs attention" (e.g. 회고할 시점) stays within the neutral palette:
+     emphasis comes from the charcoal text and label wording, not a hue. */
+  --color-warn: #3a3935;
+  --color-warn-soft: #e2dfd8;
   --color-danger: #9c3b3b;
   --color-danger-soft: #f5e2e0;
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-noto-kr);
+  --font-display: var(--font-poppins), var(--font-noto-kr);
+  --font-hero: var(--font-geist-sans), var(--font-noto-kr);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -29,8 +38,10 @@
   --color-surface: var(--color-surface);
   --color-surface-muted: var(--color-surface-muted);
   --color-border: var(--color-border);
+  --color-line: var(--color-line);
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);
+  --color-text-subtle: var(--color-text-subtle);
   --color-accent: var(--color-accent);
   --color-accent-foreground: var(--color-accent-foreground);
   --color-accent-soft: var(--color-accent-soft);
@@ -39,6 +50,7 @@
   --color-danger: var(--color-danger);
   --color-danger-soft: var(--color-danger-soft);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --font-mono: var(--font-mono);
 }
 
@@ -72,6 +84,10 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans), "Pretendard", "Apple SD Gothic Neo", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   a {
@@ -80,13 +96,173 @@
 
   :focus-visible {
     outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-    border-radius: 4px;
+    outline-offset: 3px;
+    border-radius: 6px;
   }
 
   ::selection {
     background: var(--color-accent-soft);
   }
+}
+
+@layer components {
+  /* Shared page frame: one max width for every screen, generous gutters. */
+  .nl-container {
+    width: 100%;
+    max-width: 1320px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .nl-container { padding-inline: 2rem; }
+  }
+  @media (min-width: 1024px) {
+    .nl-container { padding-inline: 3rem; }
+  }
+
+  .nl-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+  }
+
+  /* Page titles: reference-sized, fluid between phone and desktop. */
+  .nl-page-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.02;
+    font-size: clamp(2.6rem, 6.2vw, 5.4rem);
+  }
+
+  .nl-section-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+  }
+
+  .nl-row-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    font-size: clamp(1.5rem, 2.3vw, 2.1rem);
+  }
+
+  .nl-eyebrow {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-subtle);
+  }
+
+  /* Decorative visual frame. The subtle zoom on row hover is the only
+     motion outside the landing page, and it is dropped for reduced motion. */
+  .nl-visual-frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    background: #1b1a18;
+    isolation: isolate;
+  }
+  .nl-visual-frame > svg {
+    transition: transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .nl-row:hover .nl-visual-frame > svg,
+  .nl-row:focus-within .nl-visual-frame > svg {
+    transform: scale(1.025);
+  }
+
+  /* Side panel built on <dialog>. */
+  .nl-panel {
+    margin: 0 0 0 auto;
+    height: 100dvh;
+    max-height: 100dvh;
+    width: min(720px, 100vw);
+    max-width: 100vw;
+    padding: 0;
+    border: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    box-shadow: -24px 0 60px rgba(20, 19, 17, 0.18);
+  }
+  .nl-panel::backdrop {
+    background: rgba(22, 21, 19, 0.38);
+    backdrop-filter: blur(3px);
+  }
+  .nl-panel[open] {
+    animation: nl-panel-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+
+/* Bottom sheet (landing "연구 소개"): slides up from the bottom edge, glass
+   surface, backdrop fades. data-closing plays the reverse before close(). */
+.nl-sheet {
+  margin: auto auto 0 auto;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 90dvh;
+  padding: 16px 24px calc(28px + env(safe-area-inset-bottom));
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 28px 28px 0 0;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: 0 -24px 60px -20px rgba(36, 35, 32, 0.28);
+  color: var(--color-text);
+}
+@media (min-width: 640px) {
+  .nl-sheet { padding: 20px 40px 40px; }
+}
+.nl-sheet::backdrop {
+  background: rgba(36, 35, 32, 0.28);
+}
+.nl-sheet[open] {
+  animation: nl-sheet-up 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nl-sheet[open]::backdrop {
+  animation: nl-fade-in 380ms ease-out;
+}
+.nl-sheet[data-closing] {
+  animation: nl-sheet-down 260ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.nl-sheet[data-closing]::backdrop {
+  animation: nl-fade-out 260ms ease-in forwards;
+}
+@keyframes nl-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes nl-sheet-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes nl-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes nl-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes nl-panel-in {
+  from { transform: translateX(32px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nl-visual-frame > svg { transition: none; }
+  .nl-row:hover .nl-visual-frame > svg,
+  .nl-row:focus-within .nl-visual-frame > svg { transform: none; }
+  .nl-panel[open] { animation: none; }
+  .nl-sheet[open], .nl-sheet[open]::backdrop,
+  .nl-sheet[data-closing], .nl-sheet[data-closing]::backdrop { animation: none; }
 }
 
 /* ---------------------------------------------------------------------
@@ -158,12 +334,12 @@
 }
 
 @media (max-width: 640px) {
-  /* Shrink the whole liquid group so it stays a presence behind the
+  /* Scale the liquid group down a little so it stays a presence behind the
      headline instead of crowding the body copy on a narrow screen, drop
      the smallest blob, and soften the glass -- all to cut rendering cost
      while keeping the autonomous motion. */
   .nl-liquid-scale {
-    transform: scale(0.42);
+    transform: scale(0.72);
     transform-origin: center;
   }
   .nl-liquid-c { display: none; }

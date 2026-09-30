@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Noto_Sans_KR, Poppins, Geist_Mono } from "next/font/google";
 import { ScrollProgressBar } from "@/components/scroll-progress-bar";
 import "./globals.css";
 
+// Body text: Noto Sans KR carries both Hangul and Latin at every weight.
+const notoSansKr = Noto_Sans_KR({
+  variable: "--font-noto-kr",
+  subsets: ["latin"],
+  preload: false,
+});
+
+// Display: a geometric Latin face for large titles and numerals; Hangul in
+// the same heading falls back to Noto Sans KR.
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+// The landing hero title keeps its original Geist face and weight.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -23,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${notoSansKr.variable} ${poppins.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-(--color-bg) text-(--color-text)">
         <ScrollProgressBar />

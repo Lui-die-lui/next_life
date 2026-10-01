@@ -72,6 +72,10 @@
        browser's own scrollbar chrome is hidden. */
     scrollbar-width: none;
     overflow-x: hidden;
+    /* Keep fields the browser scrolls to (focus, validation bubbles) clear
+       of the sticky header and the sticky form action bar. */
+    scroll-padding-top: 5rem;
+    scroll-padding-bottom: 11rem;
   }
 
   html::-webkit-scrollbar {

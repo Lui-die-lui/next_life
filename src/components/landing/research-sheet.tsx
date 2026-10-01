@@ -92,15 +92,27 @@ export function ResearchSheet({ paperTitle }: { paperTitle: string }) {
 
           <div className="mt-5 overflow-y-auto text-[15px] leading-relaxed">
             <p className="text-sm text-(--color-text-muted)">「{paperTitle}」</p>
-            <p className="mt-4">이 앱은 위 논문의 연결 단서와 구조 비교 논의를 참고해 화면과 입력 항목을 설계했습니다.</p>
+            <p className="mt-4">
+              이 앱은 위 논문의 결과 세 가지를 연결 카드의 질문으로 옮겼습니다. 각 질문 아래에 어느 결과에서 왔는지 적어 두었습니다.
+            </p>
             <ul className="mt-3 list-disc space-y-1.5 pl-5 text-(--color-text-muted)">
-              <li>과거 경험이 새 문제에 자동으로 적용되는 것은 아닙니다. 연결을 알아차리는 단계에서 가장 자주 실패합니다.</li>
-              <li>연결 단서와 사례 비교는 공통 구조를 찾는 데 도움이 될 수 있습니다.</li>
-              <li>두 상황의 구조나 적용 조건이 다르면 이전 해법을 그대로 적용하기 어렵습니다.</li>
+              <li>
+                <strong className="font-semibold text-(--color-text)">알아차림</strong> · 원문을 확인한 12편 중 6편이
+                &lsquo;관련성을 알아차리지 못함&rsquo;을 보고해, 가장 많은 논문에서 나온 실패였습니다. → 1~3번 질문
+              </li>
+              <li>
+                <strong className="font-semibold text-(--color-text)">단서·사례 비교</strong> · 판정 가능한 9편 중 6편에서 단서나
+                사례 비교가 있는 조건의 적용 비율이 더 높았고, 반대 방향은 0편이었습니다. → 4번 질문
+              </li>
+              <li>
+                <strong className="font-semibold text-(--color-text)">적용 단계</strong> · 단서로 원천을 떠올려도 구조가 맞지
+                않거나 적용이 어려우면 연결이 성립하지 않았습니다. → 5번 질문(차이)
+              </li>
             </ul>
             <p className="mt-4 border-t border-(--color-border) pt-4">
-              연구의 최종 판정은 <strong>불분명</strong>입니다(판정 가능한 논문 9편, 사전 기준 10편 미달). 이 앱의 실제 효과도
-              검증하지 않았습니다. 연결이 도움이 되는지는 직접 작은 실험으로 확인해 보세요.
+              연구의 최종 판정은 <strong>불분명</strong>입니다(판정 가능한 논문 9편, 사전 기준 10편 미달). 포함된 연구는 모두
+              실험 과제나 같은 영역 사례를 다뤘고, 서로 다른 실제 직업 분야 사이의 전이를 다룬 연구는 없었습니다. 그래서 이 앱은
+              연결이 된다고 알려 주지 않고, 6번 질문과 작은 실험으로 직접 확인하게 합니다. 이 앱의 실제 효과도 검증하지 않았습니다.
             </p>
           </div>
         </div>

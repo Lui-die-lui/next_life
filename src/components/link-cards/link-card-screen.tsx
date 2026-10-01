@@ -8,6 +8,7 @@ import { Field, Textarea, ChoiceGroup, FormSection } from "@/components/ui/form"
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatExperienceStatus, type LinkCardStatus } from "@/lib/domain/types";
+import { LINK_CARD_REQUIRED_FOR_TRYING } from "@/lib/domain/validation";
 import type { ChallengeView, ExperienceView, LinkCardValues, LinkCardView } from "@/lib/app-data/types";
 
 const QUESTIONS = {
@@ -20,6 +21,21 @@ const QUESTIONS = {
 } as const;
 
 type QuestionKey = keyof typeof QUESTIONS;
+
+/**
+ * Which result of the paper each question comes from, with the section to
+ * check it against (05_paper.md). Shown under each question.
+ */
+const EVIDENCE: Record<QuestionKey, string> = {
+  previousProblem: "알아차림 단계 · 원문을 확인한 12편 중 6편이 '관련성을 알아차리지 못함'을 보고해 가장 흔한 실패였어요 (4.6절).",
+  solutionPrinciple: "알아차림 단계 · 해법을 알고 있어도 쓰라는 단서가 없으면 적용한 사람이 크게 줄었어요 (Gick & Holyoak, 1980 · 1절).",
+  applyTarget: "알아차림 단계 · 이전 해법과 지금 문제의 대응을 짚어 주는 단서가 있는 조건이, 판정 가능한 9편 중 6편에서 적용 비율이 높았어요. 사전 기준(10편)에는 못 미쳐 판정은 불분명이에요 (4.3절).",
+  commonGround: "구조 대응 · 두 사례를 비교하게 하면 공통 구조를 뽑아 적용하는 비율이 높아졌다는 보고가 있어요 (Gentner 외, 2003 · 2.2절).",
+  differences: "적용 단계 · 구조가 맞지 않는 원천은 힌트를 줘도 쓰이지 않았고, 단서로 떠올려도 적용에서 막힌 사례가 있었어요 (Pedone 외, 2001 · Ormerod 외, 2006 · 4.4절).",
+  verifyQuestion: "검증 · 포함된 연구 중 실제로 다른 직업 분야 사이의 전이를 다룬 연구는 0편이었어요. 내 경우에 통하는지는 직접 확인해야 해요 (4.2절, 7절).",
+};
+
+const REQUIRED_FOR_TRYING: readonly QuestionKey[] = LINK_CARD_REQUIRED_FOR_TRYING;
 
 export function LinkCardScreen({
   challenge,
@@ -92,10 +108,28 @@ export function LinkCardScreen({
   }
 
   const questionField = (key: QuestionKey, n: number, hint?: string) => (
-    <Field label={`${n}. ${QUESTIONS[key]}`} htmlFor={`q-${key}`} hint={hint}>
-      <Textarea id={`q-${key}`} value={answers[key]} onChange={(e) => setAnswer(key, e.target.value)} maxLength={4000} />
-    </Field>
+    <div className="flex flex-col gap-2">
+      <Field label={`${n}. ${QUESTIONS[key]}`} htmlFor={`q-${key}`} hint={hint} required={status === "WORTH_TRYING" && REQUIRED_FOR_TRYING.includes(key)}>
+        <Textarea
+          id={`q-${key}`}
+          value={answers[key]}
+          onChange={(e) => setAnswer(key, e.target.value)}
+          maxLength={4000}
+          aria-describedby={`q-${key}-evidence`}
+        />
+      </Field>
+      <p id={`q-${key}-evidence`} className="border-l-2 border-(--color-border) pl-3 text-[13px] leading-relaxed text-(--color-text-subtle)">
+        <span className="font-semibold">논문 근거</span> · {EVIDENCE[key]}
+      </p>
+    </div>
   );
+
+  const footerNote =
+    status === "WORTH_TRYING"
+      ? "'시도할 만함'은 2·4·5번 답이 있어야 저장돼요."
+      : status === "REVIEWING"
+        ? "검토 중에는 질문을 나중에 채워도 돼요."
+        : "";
 
   return (
     <>
@@ -123,7 +157,7 @@ export function LinkCardScreen({
         </dl>
       </header>
 
-      <form onSubmit={handleSubmit} className="pb-8 pt-12">
+      <form onSubmit={handleSubmit} onChange={() => setError(null)} className="pb-8 pt-12">
         <FormSection step="01" title="연결할 경험" description={`선택한 경험 ${experienceIds.length + orphaned.length}개`}>
           {experiences.length === 0 && orphaned.length === 0 ? (
             <div className="flex flex-col items-start gap-3 rounded-2xl bg-(--color-surface-muted) p-6">
@@ -214,7 +248,7 @@ export function LinkCardScreen({
         <div className="sticky bottom-0 z-20 -mx-5 border-t border-(--color-line) bg-(--color-bg)/95 px-5 py-4 backdrop-blur-md sm:mx-0 sm:px-0">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p aria-live="polite" className="text-[15px] text-(--color-text-muted)">
-              {error ? <span className="text-(--color-danger)">{error}</span> : savedAt ? `✓ ${savedAt}에 저장했어요` : isNew ? "6개 질문은 모두 선택이에요." : ""}
+              {error ? <span className="text-(--color-danger)">{error}</span> : savedAt ? `✓ ${savedAt}에 저장했어요` : footerNote}
             </p>
             <Button type="submit" size="lg" disabled={pending}>
               {pending ? "저장 중..." : isNew ? "연결 카드 만들기" : "저장"}
@@ -240,9 +274,13 @@ export function LinkCardScreen({
               </ul>
             )}
             <div className="flex flex-wrap gap-2">
-              {linkCard.status !== "NOT_LINKED" && (
+              {linkCard.status === "WORTH_TRYING" ? (
                 <LinkButton href={paths.newExperiment(challenge.id, linkCard.id)}>이 연결로 실험 만들기</LinkButton>
-              )}
+              ) : linkCard.status === "REVIEWING" ? (
+                <p className="w-full text-[15px] text-(--color-text-muted)">
+                  2·4·5번 질문에 답하고 상태를 &lsquo;시도할 만함&rsquo;으로 저장하면 이 연결로 실험을 만들 수 있어요.
+                </p>
+              ) : null}
               <Button
                 variant="danger"
                 disabled={deleting}

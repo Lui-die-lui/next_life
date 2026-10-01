@@ -71,7 +71,7 @@ export function NewExperimentScreen({ challenge, linkCard }: { challenge: Challe
         )}
       </header>
 
-      <form onSubmit={handleSubmit} className="pb-8 pt-12">
+      <form onSubmit={handleSubmit} onChange={() => setError(null)} className="pb-8 pt-12">
         <FormSection step="01" title="무엇을 확인하나요" description={`도전 목표: ${challenge.goalOrProblem}`}>
           <Field label="실험 제목" required htmlFor="x-title">
             <Input id="x-title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} placeholder="예: 리허설 후 촬영 비교해보기" />

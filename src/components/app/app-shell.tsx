@@ -25,7 +25,7 @@ export function AppShell({
           <p className="nl-container py-2.5 text-sm text-(--color-text-muted)">
             가상의 예시 데이터로 체험하는 데모예요.{" "}
             <span className="hidden sm:inline">
-              바꾼 내용은 이 탭에만 남고 새로고침하거나 초기화하면 처음 상태로 돌아가요.{" "}
+              바꾼 내용은 이 탭에만 남아요. 새로고침해도 유지되고, 탭을 닫거나 초기화하면 처음 상태로 돌아가요.{" "}
             </span>
             실제 계정에 저장되지 않고 메일도 보내지 않아요.
           </p>

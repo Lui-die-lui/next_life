@@ -98,7 +98,7 @@ export function ExperimentDetailScreen({ experiment }: { experiment: ExperimentV
           )}
         </section>
 
-        <aside className="flex flex-col gap-10 lg:sticky lg:top-28 lg:self-start">
+        <aside className="flex flex-col gap-10 lg:self-start">
           <section aria-labelledby="checklist-title" className="flex flex-col gap-4">
             <h2 id="checklist-title" className="text-2xl font-bold tracking-tight">
               완료 체크리스트

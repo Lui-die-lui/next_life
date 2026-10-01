@@ -14,12 +14,12 @@ const STEPS = [
   {
     label: "EXPERIENCE",
     title: "지금까지의 경험을 꺼내고",
-    desc: "분야를 가리지 않고, 해본 일과 어려웠던 점, 그때 풀어낸 방법을 기록합니다.",
+    desc: "새로 해 보고 싶은 도전과, 분야를 가리지 않고 해본 일·어려웠던 점·그때 풀어낸 방법을 기록합니다.",
   },
   {
     label: "CONNECT",
     title: "다음 도전과 연결해 보고",
-    desc: "공통된 목표·장애물·제약을 짚어 보고, 그대로 옮기면 안 되는 차이도 함께 남깁니다.",
+    desc: "연결 카드의 6개 질문으로 공통된 목표·장애물·제약을 짚고, 그대로 옮기면 안 되는 차이도 함께 남깁니다.",
   },
   {
     label: "EXPERIMENT",
@@ -81,20 +81,40 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
 
           <p className="text-xl font-medium text-(--color-text) sm:text-2xl">분야는 바뀌어도, 경험은 이어집니다.</p>
 
-          <p className="max-w-md text-sm text-(--color-text)/85 sm:text-base">
-            지금까지의 경험에서 다음 도전에 가져갈 방법을 찾고,
-            <br /> 작은 실험으로 확인해 보세요.
+          {/* Who it helps and how, in one sentence (BRB-C03). */}
+          <p className="max-w-xl text-[15px] leading-relaxed text-(--color-text)/90 sm:text-lg">
+            이 앱은 <strong className="font-semibold">다른 분야에서 새 도전을 시작하는 사람</strong>이 이전 경험을 새 문제에 옮겨
+            보려 할 때, 연결을 알아차리게 하는 질문과 차이를 따지는 질문으로 검토한 뒤{" "}
+            <strong className="font-semibold">작은 실험으로 확인하도록 돕습니다.</strong>
           </p>
 
-          {/* Side by side at every width; slightly smaller on phones so both fit on one row. */}
+          {/* Signed out, the no-login demo is the main way in; signed in, the app is. */}
           <div className="flex flex-row flex-nowrap items-center justify-center gap-2 sm:gap-3">
-            <LinkButton href={startHref} className="nl-cta-primary px-4 sm:h-14 sm:px-7 sm:text-base">
-              다음 생 시작하기
-            </LinkButton>
-            <LinkButton href="/demo" variant="secondary" className="px-4 sm:h-14 sm:px-7 sm:text-base">
-              예시로 체험하기
-            </LinkButton>
+            {signedIn ? (
+              <>
+                <LinkButton href={startHref} className="nl-cta-primary px-4 sm:h-14 sm:px-7 sm:text-base">
+                  다음 생 시작하기
+                </LinkButton>
+                <LinkButton href="/demo" variant="secondary" className="px-4 sm:h-14 sm:px-7 sm:text-base">
+                  예시로 체험하기
+                </LinkButton>
+              </>
+            ) : (
+              <>
+                <LinkButton href="/demo" className="nl-cta-primary px-4 sm:h-14 sm:px-7 sm:text-base">
+                  로그인 없이 써 보기
+                </LinkButton>
+                <LinkButton href={startHref} variant="secondary" className="px-4 sm:h-14 sm:px-7 sm:text-base">
+                  내 기록 시작하기
+                </LinkButton>
+              </>
+            )}
           </div>
+          {!signedIn && (
+            <p className="-mt-4 text-xs text-(--color-text-muted) sm:text-sm">
+              데모는 가상의 예시 데이터로 바로 열려요. 내 기록은 Google 로그인 후 저장돼요.
+            </p>
+          )}
 
           {/* Research reference: quiet text on the first screen; details open in a bottom sheet (no layout shift). */}
           <ResearchSheet paperTitle={PAPER_TITLE} />

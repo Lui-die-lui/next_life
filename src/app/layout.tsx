@@ -40,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="ko"
       className={`${notoSansKr.variable} ${poppins.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-(--color-bg) text-(--color-text)">
         <ScrollProgressBar />

@@ -78,10 +78,18 @@ export function isValidChallengeTransition(from: string, to: string) {
 
 export const linkCardStatusEnum = z.enum(["REVIEWING", "WORTH_TRYING", "NOT_LINKED"]);
 
+/**
+ * Questions a WORTH_TRYING card must answer before it can lead to an
+ * experiment. They follow the paper's two findings: noticing what carries
+ * over (principle + shared structure) and checking where the structure
+ * differs (cases where the old solution failed to apply).
+ */
+export const LINK_CARD_REQUIRED_FOR_TRYING = ["solutionPrinciple", "commonGround", "differences"] as const;
+
 export const linkCardInputSchema = z
   .object({
     challengeId: z.string().min(1),
-    experienceIds: z.array(z.string().min(1)).default([]),
+    experienceIds: z.array(z.string().min(1)).min(1, "연결할 경험을 하나 이상 골라 주세요."),
     status: linkCardStatusEnum.default("REVIEWING"),
     previousProblem: optionalText(LONG_MAX),
     solutionPrinciple: optionalText(LONG_MAX),
@@ -94,7 +102,20 @@ export const linkCardInputSchema = z
   .refine(
     (v) => v.status !== "NOT_LINKED" || (v.noLinkReason?.length ?? 0) > 0,
     { message: "연결하지 않는 이유를 남겨 주세요.", path: ["noLinkReason"] }
-  );
+  )
+  .superRefine((v, ctx) => {
+    if (v.status !== "WORTH_TRYING") return;
+    for (const key of LINK_CARD_REQUIRED_FOR_TRYING) {
+      if (!v[key]) {
+        ctx.addIssue({
+          code: "custom",
+          message: "'시도할 만함'으로 정하려면 2번(원리), 4번(공통점), 5번(차이) 질문에 답해 주세요.",
+          path: [key],
+        });
+        return;
+      }
+    }
+  });
 
 export type LinkCardInput = z.input<typeof linkCardInputSchema>;
 export type LinkCardUpdateInput = Omit<LinkCardInput, "challengeId">;

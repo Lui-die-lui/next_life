@@ -109,7 +109,7 @@ export function ReportScreen({ experiment }: { experiment: ExperimentView }) {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="pb-8 pt-12">
+      <form onSubmit={handleSubmit} onChange={() => setError(null)} className="pb-8 pt-12">
         <FormSection step="01" title="무엇을 했나요" description="계획과 달라진 점도 그대로 적어 주세요.">
           <Field label="실제로 해 본 일" required htmlFor="r-what">
             <Textarea id="r-what" rows={5} value={whatYouDid} onChange={(e) => setWhatYouDid(e.target.value)} required maxLength={4000} />
@@ -199,6 +199,7 @@ function NextChallenge({ experiment, onCreated }: { experiment: ExperimentView; 
           ) : (
             <form
               className="flex flex-col gap-6"
+              onChange={() => setError(null)}
               onSubmit={(e) => {
                 e.preventDefault();
                 setError(null);

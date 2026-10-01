@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createDemoSeed } from "./seed";
 import type { DemoState, DemoLinkCardExperienceSnapshot, DemoExperiment } from "./types";
 import type { ChallengeStatus, ExperimentStatus } from "@/lib/domain/types";
@@ -12,6 +12,29 @@ import type {
   NextChallengeValues,
   ReportValues,
 } from "@/lib/app-data/types";
+
+/** Per-tab storage so a reload keeps what the visitor made; closing the tab or "데모 초기화" clears it. */
+const STORAGE_KEY = "next-life-demo-v1";
+
+function loadStoredState(): DemoState | null {
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<DemoState>;
+    const lists = [parsed.experiences, parsed.challenges, parsed.linkCards, parsed.experiments];
+    return lists.every(Array.isArray) ? (parsed as DemoState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveState(state: DemoState) {
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Storage blocked or full: the demo still works, it just won't survive a reload.
+  }
+}
 
 function randomId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
@@ -47,6 +70,7 @@ export interface DemoActions {
 }
 
 const DemoStateContext = createContext<DemoState | null>(null);
+const DemoReadyContext = createContext(false);
 const DemoActionsContext = createContext<DemoActions | null>(null);
 
 function snapshots(state: DemoState, experienceIds: string[]): DemoLinkCardExperienceSnapshot[] {
@@ -67,11 +91,23 @@ function mapExperiment(state: DemoState, id: string, fn: (exp: DemoExperiment) =
 }
 
 export function DemoProvider({ children }: { children: ReactNode }) {
-  // Demo state lives only in memory for the current visit (resettable, never
-  // written to any account's real data). It intentionally does not persist
-  // across a hard reload -- only across client-side navigation within /demo,
-  // since this provider stays mounted at the /demo layout.
+  // Demo state lives in this tab only (resettable, never written to any
+  // account's real data). The server and the first client render use the
+  // seed; after mount the tab's saved copy, if any, replaces it. Until then
+  // `ready` is false so detail pages don't 404 on an item made before a reload.
   const [state, setState] = useState<DemoState>(() => createDemoSeed());
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const stored = loadStoredState();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage is only readable after hydration
+    if (stored) setState(stored);
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (ready) saveState(state);
+  }, [ready, state]);
 
   const actions = useMemo<DemoActions>(
     () => ({
@@ -236,7 +272,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   return (
     <DemoStateContext.Provider value={state}>
-      <DemoActionsContext.Provider value={actions}>{children}</DemoActionsContext.Provider>
+      <DemoReadyContext.Provider value={ready}>
+        <DemoActionsContext.Provider value={actions}>{children}</DemoActionsContext.Provider>
+      </DemoReadyContext.Provider>
     </DemoStateContext.Provider>
   );
 }
@@ -251,4 +289,9 @@ export function useDemoActions() {
   const ctx = useContext(DemoActionsContext);
   if (!ctx) throw new Error("useDemoActions must be used within DemoProvider");
   return ctx;
+}
+
+/** False until the tab's saved demo state has been loaded after hydration. */
+export function useDemoReady() {
+  return useContext(DemoReadyContext);
 }

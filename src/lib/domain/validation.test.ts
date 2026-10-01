@@ -62,8 +62,30 @@ describe("linkCardInputSchema", () => {
     expect(parsed.noLinkReason).toBe("구조가 다름");
   });
 
+  it("requires at least one experience", () => {
+    expect(() => linkCardInputSchema.parse({ ...base, experienceIds: [], status: "REVIEWING" })).toThrow();
+  });
+
+  it("lets a REVIEWING card stay a draft with no answers", () => {
+    expect(() => linkCardInputSchema.parse({ ...base, status: "REVIEWING" })).not.toThrow();
+  });
+
+  it("requires principle, common ground and differences for WORTH_TRYING", () => {
+    const answered = { solutionPrinciple: "리허설 반복", commonGround: "보여주는 순간이 정해짐", differences: "촬영은 편집 가능" };
+    expect(() => linkCardInputSchema.parse({ ...base, status: "WORTH_TRYING" })).toThrow();
+    expect(() => linkCardInputSchema.parse({ ...base, status: "WORTH_TRYING", ...answered, differences: "   " })).toThrow();
+    expect(() => linkCardInputSchema.parse({ ...base, status: "WORTH_TRYING", ...answered })).not.toThrow();
+  });
+
   it("does not require a reason for WORTH_TRYING", () => {
-    expect(() => linkCardInputSchema.parse({ ...base, status: "WORTH_TRYING" })).not.toThrow();
+    const parsed = linkCardInputSchema.parse({
+      ...base,
+      status: "WORTH_TRYING",
+      solutionPrinciple: "원리",
+      commonGround: "공통점",
+      differences: "차이",
+    });
+    expect(parsed.noLinkReason).toBeUndefined();
   });
 });
 

@@ -44,7 +44,7 @@ export function ChallengeForm({
   }
 
   return (
-    <form id={id} onSubmit={handleSubmit} className="flex flex-col gap-10">
+    <form id={id} onSubmit={handleSubmit} onChange={() => setError(null)} className="flex flex-col gap-10">
       <div className="flex flex-col gap-6">
         <p className="nl-eyebrow">어떤 도전인가요</p>
         <Field label="도전 제목" required htmlFor={`${id}-title`}>

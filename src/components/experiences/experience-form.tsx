@@ -65,7 +65,7 @@ export function ExperienceForm({
   const listId = `${id}-fields`;
 
   return (
-    <form id={id} onSubmit={handleSubmit} className="flex flex-col gap-10">
+    <form id={id} onSubmit={handleSubmit} onChange={() => setError(null)} className="flex flex-col gap-10">
       <div className="flex flex-col gap-6">
         <p className="nl-eyebrow">기본 정보</p>
         <div className="grid gap-6 sm:grid-cols-2">

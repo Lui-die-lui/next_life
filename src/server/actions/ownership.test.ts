@@ -98,9 +98,16 @@ describe("cross-user ownership checks", () => {
     });
 
     asUser(USER_B);
+    // B's own experience, so the input itself is valid and only ownership can reject it.
+    const ownExperience = await createExperience({
+      field: "개발",
+      title: "B의 경험",
+      whatYouDid: "테스트",
+      status: "COMPLETED",
+    });
     await expect(
-      createLinkCard({ challengeId: challenge.id, experienceIds: [], status: "REVIEWING" })
-    ).rejects.toThrow();
+      createLinkCard({ challengeId: challenge.id, experienceIds: [ownExperience.id], status: "REVIEWING" })
+    ).rejects.toThrow("도전을 찾을 수 없습니다.");
   });
 
   it("blocks user B from linking user A's experience into their own card", async () => {

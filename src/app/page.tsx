@@ -112,7 +112,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
           </div>
           {!signedIn && (
             <p className="-mt-4 text-xs text-(--color-text-muted) sm:text-sm">
-              데모는 가상의 예시 데이터로 바로 열려요. 내 기록은 Google 로그인 후 저장돼요.
+              데모는 가상의 예시 데이터로 바로 열려요. 내 기록은 로그인 후 저장돼요.
             </p>
           )}
 
